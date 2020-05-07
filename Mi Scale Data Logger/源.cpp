@@ -43,6 +43,17 @@ struct WeightData
 	uint8_t hour;
 	uint8_t minute;
 	uint8_t second;
+	bool operator ==(const WeightData& rhs)
+	{
+		return this->status == rhs.status &&
+			this->weight == rhs.weight &&
+			this->year == rhs.year &&
+			this->month == rhs.month &&
+			this->day == rhs.day &&
+			this->hour == rhs.hour &&
+			this->minute == rhs.minute &&
+			this->second == rhs.second;
+	}
 };
 #pragma pack(pop)
 
@@ -217,6 +228,11 @@ const auto doNothing = [](void*, int, char**, char**) {return 0; };
 
 void StoreWeightData(WeightData& data)
 {
+	static WeightData LastWeightData;
+	if (data == LastWeightData)
+		return;
+	else
+		LastWeightData = data;
 	double weight = 0;
 	if (data.status & STATUS_UNIT_LB)
 		weight = data.weight / 100.0 * KGPerLB;
@@ -232,7 +248,7 @@ void StoreWeightData(WeightData& data)
 		putchar('\n');
 		return;
 	}
-	
+
 	printf(" stablized ");
 
 	sqlite3* db = nullptr;
@@ -254,14 +270,14 @@ void StoreWeightData(WeightData& data)
 			mergeID = std::atoll(argv[0]);
 			return 0;
 		}, &mergeID, &errmsg);
-	if(err)
+	if (err)
 		cerr << errmsg;
 
 	if (mergeID == -1)
 	{
 		printf("saved!\n");
 
-		const auto sql = "INSERT INTO weights(weight,data_time) VALUES(" + 
+		const auto sql = "INSERT INTO weights(weight,data_time) VALUES(" +
 			std::to_string((int)(weight * 200)) + "," +
 			std::to_string(UnixTimeFromWeightData(data)) + ");";
 		err = sqlite3_exec(db, sql.data(), doNothing, nullptr, &errmsg);
